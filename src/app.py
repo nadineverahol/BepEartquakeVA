@@ -16,7 +16,7 @@ from dash.dependencies import Input, Output
 start = time.time()
 
 # Earthquakes from the year 2000 with minmag=2.5 and maxdepth=100km
-df = pd.read_csv("year_2000.csv")
+df = pd.read_csv('data.csv')
 
 # Make month attribute for slider
 df['month'] = [timestamp[5:7] for timestamp in df['timestamp']]
