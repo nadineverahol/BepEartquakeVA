@@ -2,4 +2,6 @@
 .mypy_cache
 venv
 output/**
+resources/**
+*.csv
 !.gitkeep
