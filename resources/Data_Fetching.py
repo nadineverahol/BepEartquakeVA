@@ -3,11 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import geopandas as gpd
-import geoplot as gplt
+# import geoplot as gplt
 from shapely.geometry import Point
 import plotly.graph_objects as go
-import json, urllib, time, requests
+import json
+import urllib
+import time
+import requests
 import dash
+
 
 def createUrl(starttime, endtime, minmagnitude, maxdepth):
     """
@@ -64,7 +68,8 @@ for year in years:
                 }
             )
 
-    print("fetching data took {} seconds for period {} to {}".format(time.time() - year_timer, half1_start, half2_end))
+    print("fetching data took {} seconds for period {} to {}".format(
+        time.time() - year_timer, half1_start, half2_end))
 
 df = pd.DataFrame(d)
 df = df.sort_values('timestamp')

@@ -3,12 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import geopandas as gpd
-import geoplot as gplt
+# import geoplot as gplt
 from shapely.geometry import Point
-import plotly.graph_objects as go
+from plotly import graph_objects as go
 from datetime import datetime as dt
 import plotly.express as px
-import json, urllib, time, requests
+import json
+import urllib
+import time
+import requests
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -27,10 +30,10 @@ df['day'] = df['day'].astype(int)
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
 #
 
-px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
+px.set_mapbox_access_token(
+    "pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 fig = px.scatter_mapbox(df, lat='lat', lon='long', color='mag', size='significance', hover_name='timestamp',
                         color_continuous_scale=px.colors.cyclical.IceFire, size_max=10, zoom=0, opacity=0.8)
-
 
 
 # Dashboard
@@ -71,13 +74,13 @@ styles = {
 app.layout = html.Div([
 
 
-# for time range filtering
+    # for time range filtering
     dcc.DatePickerRange(
         id='date-range',
         min_date_allowed=dt(2000, 1, 1),
         max_date_allowed=dt(2020, 3, 31),
         #initial_visible_month=dt(2000, 1, 1),
-        start_date=dt(2000,1, 1).date(),
+        start_date=dt(2000, 1, 1).date(),
         end_date=dt(2000, 1, 2).date(),
         calendar_orientation='vertical'
     ),
@@ -106,13 +109,13 @@ def update_figure(start_date, end_date, value):
     if value == None:
 
         # lon and lat together make a 0 on the map
-        fig = go.Figure(go.Scattermapbox(mode = 'markers+lines',
-                                lon=[0, 0, -20, -20, 0],
-                                lat=[50, -50, -50, 50, 50],
-                                marker={'size': 30}))
+        fig = go.Figure(go.Scattermapbox(mode='markers+lines',
+                                         lon=[0, 0, -20, -20, 0],
+                                         lat=[50, -50, -50, 50, 50],
+                                         marker={'size': 30}))
         fig.update_layout(
-            mapbox = {
-                'center': {'lon' : -10, 'lat': 0},
+            mapbox={
+                'center': {'lon': -10, 'lat': 0},
                 'style': "open-street-map",
                 'zoom': 1
             }
@@ -121,11 +124,12 @@ def update_figure(start_date, end_date, value):
         return fig
 
     else:
-        filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+        filtered_df = df[(df.timestamp.between(
+            start_date, end_date)) & (df.mag >= value)]
 
-        fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='mag', range_color=[2.5,10],
-                            size='significance', hover_name='timestamp',
-                            color_continuous_scale='Bluered', size_max=10, zoom=1, opacity=0.6)
+        fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='mag', range_color=[2.5, 10],
+                                size='significance', hover_name='timestamp',
+                                color_continuous_scale='Bluered', size_max=10, zoom=1, opacity=0.6)
         return fig
 
 
