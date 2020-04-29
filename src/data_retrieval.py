@@ -5,7 +5,7 @@ import pymongo
 from datetime import datetime, timedelta
 
 # Connect to the db
-mongo = pymongo.MongoClient("mongodb://localhost:32768/")
+mongo = pymongo.MongoClient("mongodb://localhost:27017/")
 collection = mongo["map-earthquake-data"]["earthquakes"]
 
 # Select the date to start from
@@ -20,7 +20,7 @@ while True:
     end_datetime = start_datetime + timedelta(days=30)  
     month_iteration = 0
 
-    print "Searching for earthquakes from",start_datetime.strftime("%Y-%m-%d"),"to",end_datetime.strftime("%Y-%m-%d")
+    print("Searching for earthquakes from",start_datetime.strftime("%Y-%m-%d"),"to",end_datetime.strftime("%Y-%m-%d"))
 
     while True:
         # Build the url
@@ -37,7 +37,7 @@ while True:
         json = response.json()
         events = json["features"]
         
-        print "Found",len(events),"earthquakes"
+        print("Found",len(events),"earthquakes")
 
         # Insert all found events
         collection.insert_many(events)
@@ -45,7 +45,7 @@ while True:
         # Reiterate the month if we found more than 20k, continue with the next otherwise
         if len(events) >= 20000:
             month_iteration += 1
-            print "Searching for more iterations in the current month"
+            print("Searching for more iterations in the current month")
         else:
             start_datetime = end_datetime
             break
@@ -55,4 +55,4 @@ while True:
         break
 
 
-print "The earthquake register has been updated!"
+print("The earthquake register has been updated!")
