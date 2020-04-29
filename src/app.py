@@ -37,18 +37,19 @@ px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210Z
 
 
 # Dashboard
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
+    html.Div([html.Div(['first column'], className='column is-one-fifth'), html.Div(['second column'], className='column'), html.Div(['third column'], className='column is-one-fifth')], className='columns'), 
+    html.Div('Bulma test', className='columns'),
 
     # for time range filtering
     dcc.DatePickerRange(
         id='date-range',
         min_date_allowed=dt(2000, 1, 1),
         max_date_allowed=dt(2020, 3, 31),
-        # initial_visible_month=dt(2000, 1, 1),
         start_date=dt(2011, 1, 1).date(),
         end_date=dt(2011, 12, 31).date(),
         calendar_orientation='vertical'
@@ -91,14 +92,17 @@ app.layout = html.Div([
     ),
 
     dcc.Graph(id='graph-main',
-              style={'height': 600,
-                     'width': 1200}),
+              #style={'height': 600,
+                     #'width': 1200}
+                     ),
 
     dcc.Graph(id='hist_of_mag',
               style={'height': 600,
                      'width': 600}),
 
-    dcc.Store(id='storage')
+    dcc.Store(id='storage'),
+
+    html.Div([html.P("Footer")])
 ])
 
 
