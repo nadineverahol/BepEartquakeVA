@@ -2,16 +2,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-import geopandas as gpd
 # import geoplot as gplt
-from shapely.geometry import Point
+#from shapely.geometry import Point
 from plotly import graph_objects as go
 from datetime import datetime as dt
 import plotly.express as px
 import json
 import urllib
 import time
-import requests
+#import requests
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -20,7 +19,7 @@ from dash.dependencies import Input, Output
 start = time.time()
 
 # Earthquakes from the year 2000 with minmag=2.5 and maxdepth=100km
-df = pd.read_csv('data.csv')
+df = pd.read_csv('resources/data.csv')
 
 # Make month and attribute, also making timestamp column actual timestamps and not strings
 df['month'] = [timestamp[5:7] for timestamp in df['timestamp']]
