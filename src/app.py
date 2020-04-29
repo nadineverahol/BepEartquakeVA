@@ -23,28 +23,20 @@ start = time.time()
 
 # Earthquakes from the year 2000 with minmag=2.5 and maxdepth=100km
 df = pd.read_csv('resources/data.csv')
-
-# Make month and attribute, also making timestamp column actual timestamps and not strings
-# df['month'] = [timestamp[5:7] for timestamp in df['timestamp']]
-# df['day'] = [timestamp[8:10] for timestamp in df['timestamp']]
-# df['month'] = df['month'].astype(int)
-# df['day'] = df['day'].astype(int)
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
-
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
-# fig = px.scatter_mapbox(df, lat='lat', lon='long', color='mag', size='significance', hover_name='timestamp',
-#                        color_continuous_scale=px.colors.cyclical.IceFire, size_max=10, zoom=0, opacity=0.8)
 
 
-# Dashboard
+''' DASHBOARD '''
+
 external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
-    html.Div([html.Div(['first column'], className='column is-one-fifth'), html.Div(['second column'], className='column'), html.Div(['third column'], className='column is-one-fifth')], className='columns'), 
-    html.Div('Bulma test', className='columns'),
-
+    html.Div([html.Label('Dashboard')]),
+    html.Div([html.Div([html.Label('Filters'),
+    
     # for time range filtering
     dcc.DatePickerRange(
         id='date-range',
@@ -72,7 +64,7 @@ app.layout = html.Div([
         value=25,
         min='2',
         max='100'
-    ),
+    ),    
 
     dcc.Dropdown(
         id='main-map-selector',
@@ -86,24 +78,31 @@ app.layout = html.Div([
         ],
         value='Scatter',
         multi=False,
-        style={'height': 50, 'width': 200},
         optionHeight=50,
         placeholder="Select visualization"
     ),
-
+    
+    ], className='column is-one-fifth'), html.Div([html.Label('second column'), 
+    
     dcc.Graph(id='graph-main',
               #style={'height': 600,
                      #'width': 1200}
                      ),
+    
+    ], className='column'), html.Div([html.Label('third column'),
 
     dcc.Graph(id='hist_of_mag',
               style={'height': 600,
-                     'width': 600}),
+                     'width': 500}),
+
+    ], className='column is-one-fifth')], className='columns'),
 
     dcc.Store(id='storage'),
 
-    html.Div([html.P("Footer")])
+    html.Div([html.P("BEP Earthquake Visualization Tool By Jeroen Gommers, Nadine Hol, Wessel Krenn")])
 ])
+
+''' END DASHBOARD '''
 
 
 @app.callback(
@@ -146,8 +145,6 @@ def update_side_graphs(dic):
     fig.append_trace(trace0, 1, 1)
     fig.append_trace(trace1, 1, 2)
 
-    # fig = px.histogram(filtered_df, x="mag", title='Histogram of earthquake magnitudes for selected time window',
-    #                   opacity=0.8, color_discrete_sequence=['indianred'])
     return fig
 
 
