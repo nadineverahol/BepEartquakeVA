@@ -13,6 +13,8 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, OPTICS
+from haversine import haversine
 
 start = time.time()
 
@@ -20,16 +22,16 @@ start = time.time()
 df = pd.read_csv('data.csv')
 
 # Make month and attribute, also making timestamp column actual timestamps and not strings
-df['month'] = [timestamp[5:7] for timestamp in df['timestamp']]
-df['day'] = [timestamp[8:10] for timestamp in df['timestamp']]
-df['month'] = df['month'].astype(int)
-df['day'] = df['day'].astype(int)
+#df['month'] = [timestamp[5:7] for timestamp in df['timestamp']]
+#df['day'] = [timestamp[8:10] for timestamp in df['timestamp']]
+#df['month'] = df['month'].astype(int)
+#df['day'] = df['day'].astype(int)
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
-#
+
 
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
-fig = px.scatter_mapbox(df, lat='lat', lon='long', color='mag', size='significance', hover_name='timestamp',
-                        color_continuous_scale=px.colors.cyclical.IceFire, size_max=10, zoom=0, opacity=0.8)
+#fig = px.scatter_mapbox(df, lat='lat', lon='long', color='mag', size='significance', hover_name='timestamp',
+#                        color_continuous_scale=px.colors.cyclical.IceFire, size_max=10, zoom=0, opacity=0.8)
 
 
 
@@ -38,47 +40,18 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-"""
-app.layout = html.Div(children=[
-    html.H1(children='Earthquake visualization tool'),
-    html.Div(children='''
-    A visualization tool for the earthquakes BEP, by Jeroen Gommers, Nadine Hole and Wessel Krenn.
-    '''),
-
-
-    dcc.Graph(id='graph-width-slider',
-              style={'height': 600,
-                     'width': 1200),
-    dcc.Slider(
-        id='month-slider',
-        min=df['month'].min(),
-        max=df['month'].max(),
-        value=df['month'].min(),
-        marks={str(month): str(month) for month in df['month'].unique()},
-        step=None
-
-    ),
-  ]
-)
-"""
-styles = {
-    'pre': {
-        'border': 'thin lightgrey solid',
-        'overflowX': 'scroll'
-    }
-}
 
 app.layout = html.Div([
 
 
-# for time range filtering
+    # for time range filtering
     dcc.DatePickerRange(
         id='date-range',
         min_date_allowed=dt(2000, 1, 1),
         max_date_allowed=dt(2020, 3, 31),
-        #initial_visible_month=dt(2000, 1, 1),
-        start_date=dt(2000,1, 1).date(),
-        end_date=dt(2000, 1, 2).date(),
+        # initial_visible_month=dt(2000, 1, 1),
+        start_date=dt(2011, 1, 1).date(),
+        end_date=dt(2011, 12, 31).date(),
         calendar_orientation='vertical'
     ),
 
@@ -88,12 +61,38 @@ app.layout = html.Div([
         type='number',
         placeholder='input number',
         min=1,
-        max=10
-
+        max=10,
     ),
+
+    dcc.Input(
+        id='number-of-clusters',
+        type='number',
+        placeholder='fill in number of clusters',
+        min='2',
+        max='100'
+    ),
+
+    dcc.Dropdown(
+        id='main-map-selector',
+        options=[
+            {'label': 'Scatterplot', 'value': 'Scatter'},
+            {'label': 'Density map', 'value': 'Densitymap'},
+            {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+            {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+            {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
+            {'label': 'OPTICS clustering', 'value': 'OPTICS'}
+        ],
+        value='Scatter',
+        multi=False,
+        style={'height': 50, 'width': 200},
+        optionHeight=50,
+        placeholder="Select visualization"
+    ),
+
     dcc.Graph(id='graph-main',
               style={'height': 600,
                      'width': 1200}),
+
 ])
 
 
@@ -101,32 +100,94 @@ app.layout = html.Div([
     Output('graph-main', 'figure'),
     [Input('date-range', 'start_date'),
      Input('date-range', 'end_date'),
-     Input('min-magnitude', 'value')])
-def update_figure(start_date, end_date, value):
-    if value == None:
+     Input('min-magnitude', 'value'),
+     Input('main-map-selector', 'value'),
+     Input('number-of-clusters', 'value')])
+def update_figure(start_date, end_date, value, option, n_clusters):
+    if option is None:
+        return {}
 
-        # lon and lat together make a 0 on the map
-        fig = go.Figure(go.Scattermapbox(mode = 'markers+lines',
-                                lon=[0, 0, -20, -20, 0],
-                                lat=[50, -50, -50, 50, 50],
-                                marker={'size': 30}))
-        fig.update_layout(
-            mapbox = {
-                'center': {'lon' : -10, 'lat': 0},
-                'style': "open-street-map",
-                'zoom': 1
-            }
-        )
+    if option == 'Scatter':
+        if value is None or value > df['mag'].max():
+            return {}
 
-        return fig
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='mag', range_color=[2.5, 10],
+                                    size='significance', hover_name='timestamp',
+                                    color_continuous_scale='Bluered', size_max=10, zoom=1, opacity=0.6)
+            return fig
+    if option == 'Densitymap':
+        if value is None or value > df['mag'].max():
+            return {}
 
-    else:
-        filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            fig = px.density_mapbox(filtered_df, lat='lat', lon='long', z='mag', radius=10, zoom=1,
+                                    center=dict(lat=0, lon=0))
 
-        fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='mag', range_color=[2.5,10],
-                            size='significance', hover_name='timestamp',
-                            color_continuous_scale='Bluered', size_max=10, zoom=1, opacity=0.6)
-        return fig
+            return fig
+
+    if option == 'K-means-Clustering':
+        if value is None or value > df['mag'].max() or n_clusters is None:
+            return {}
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            kmeans = KMeans(n_clusters=n_clusters)
+            kmeans.fit(filtered_df[['long', 'lat']].to_numpy())
+            filtered_df['cluster_nr'] = kmeans.predict(filtered_df[['long', 'lat']].to_numpy())
+
+            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='cluster_nr',
+                                    size='significance', hover_name='timestamp',
+                                    size_max=10, zoom=1, opacity=0.6)
+
+            return fig
+
+    if option == 'Agglomerative':
+        if value is None or value > df['mag'].max() or n_clusters is None:
+            return {}
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            agglomerative = AgglomerativeClustering(n_clusters=n_clusters, distance_threshold=None)
+            agglomerative.fit(filtered_df[['long', 'lat']].to_numpy())
+            filtered_df['agglo_cluster'] = agglomerative.labels_
+
+            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='agglo_cluster',
+                                    size='significance', hover_name='timestamp',
+                                    size_max=10, zoom=1, opacity=0.6)
+
+            return fig
+
+    if option == 'DBSCAN':
+        if value is None or value > df['mag'].max():
+            return {}
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            x_array = filtered_df[['long', 'lat']].to_numpy()
+            # 50/6371 is 50km distance between points in radians
+            db = DBSCAN(eps=100/6371., min_samples=5, algorithm='auto', metric='haversine').fit(np.radians(x_array))
+            filtered_df['DBSCAN_cluster'] = db.labels_
+
+            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='DBSCAN_cluster',
+                                    size='significance', hover_name='timestamp',
+                                    size_max=10, zoom=1, opacity=0.6)
+
+            return fig
+
+    if option == 'OPTICS':
+        if value is None or value > df['mag'].max():
+            return {}
+        else:
+            filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+            x_array = filtered_df[['long', 'lat']].to_numpy()
+            optics = OPTICS(min_samples=5, eps=100/6371., metric='haversine').fit(np.radians(x_array))
+            filtered_df['Optics'] = optics.labels_
+
+            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='Optics',
+                                    size='significance', hover_name='timestamp',
+                                    size_max=10, zoom=1, opacity=0.6)
+
+            return fig
 
 
 if __name__ == '__main__':
