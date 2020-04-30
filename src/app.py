@@ -175,24 +175,27 @@ def filter_data(start_date, end_date, value):
 def update_side_graphs(dic):
     filtered_df = pd.DataFrame.from_dict(dic)
 
-    fig = make_subplots(rows=1, cols=2)
-    trace0 = go.Histogram(x=filtered_df['mag'], name='Magnitudes',
-                          xbins=dict(
-                              start=2.5,
-                              end=10,
-                              size=1
-                          )
-                          )
-    trace1 = go.Histogram(x=filtered_df['significance'], name='Significances',
-                          xbins=dict(
-                              start=50,
-                              end=1000,
-                              size=50
-                          )
-                          )
+    if filtered_df.empty:
+        return {}
+    else:
+        fig = make_subplots(rows=1, cols=2)
+        trace0 = go.Histogram(x=filtered_df['mag'], name='Magnitudes',
+                            xbins=dict(
+                                start=2.5,
+                                end=10,
+                                size=1
+                            )
+                            )
+        trace1 = go.Histogram(x=filtered_df['significance'], name='Significances',
+                            xbins=dict(
+                                start=50,
+                                end=1000,
+                                size=50
+                            )
+                            )
 
-    fig.append_trace(trace0, 1, 1)
-    fig.append_trace(trace1, 1, 2)
+        fig.append_trace(trace0, 1, 1)
+        fig.append_trace(trace1, 1, 2)
 
     return fig
 
