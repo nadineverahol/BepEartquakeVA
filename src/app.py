@@ -37,10 +37,8 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
     "position": "sticky",
-    "top": 0,
-    "width": "16rem",
     "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
+    "background-color": "secondary",
 }
 
 navbar = dbc.NavbarSimple(
@@ -116,27 +114,36 @@ sidebar = html.Div(
 )
 
 content = html.Div([
-        dcc.Graph(id='graph-main',
-              style={'height': 600,
-                     'width': 1200}
-                     ),
+    html.H2("Main visualization", className="display-4"),
+    html.Hr(),
 
-        dcc.Graph(id='hist_of_mag',
-              style={'height': 600,
-                     'width': 500}),
+        dcc.Graph(id='graph-main',
+              style={'height': "25vw",
+                     'width': "50vw"}
+                     ),
 
         dcc.Store(id='storage'),
                      ],
     id="page-content")
+
+side_graphs = html.Div([
+    html.H2("Side graphs", className="display-4"),
+    html.Hr(),
+
+        dcc.Graph(id='hist_of_mag',
+            style={'height': 600,
+                    'width': "22vw"}),
+    ],
+)
 
 app.layout = html.Div(
     [
         dbc.Row(dbc.Col(html.Div(navbar))),
         dbc.Row(
             [
-                dbc.Col(html.Div(sidebar)),
-                dbc.Col([html.Div(content), html.Div('Test onderkant')]),
-                dbc.Col(html.Div("test")),
+                dbc.Col(html.Div(sidebar),width=2),
+                dbc.Col([html.Div(content), html.Div('Detailed information')],width=7),
+                dbc.Col(html.Div(side_graphs), width=3),
             ]
         ),
     ]

@@ -20,3 +20,10 @@ p {
     position: fixed;
     bottom: 1rem;
 }
+
+.col-7 {
+    margin-top: 30px;
+}
+.col-3 {
+    margin-top: 30px;
+}
