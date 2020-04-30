@@ -34,26 +34,23 @@ px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210Z
 
 # external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
-    "position": "fixed",
+    "position": "sticky",
     "top": 0,
-    "left": 0,
-    "bottom": 0,
     "width": "16rem",
     "padding": "2rem 1rem",
     "background-color": "#f8f9fa",
 }
 
-# the styles for the main content position it to the right of the sidebar and
-# add some padding.
-CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
-    "padding": "2rem 1rem",
-}
+navbar = dbc.NavbarSimple(
+    brand="Earthquake visualization tool",
+    brand_href="#",
+    color="primary",
+    dark=True,
+)
 
 sidebar = html.Div(
     [
@@ -132,9 +129,21 @@ content = html.Div([
 
         dcc.Store(id='storage'),
                      ],
-    id="page-content", style=CONTENT_STYLE)
+    id="page-content")
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
+app.layout = html.Div(
+    [
+        dbc.Row(dbc.Col(html.Div(navbar))),
+        dbc.Row(
+            [
+                dbc.Col(html.Div(sidebar)),
+                dbc.Col(html.Div(content)),
+                dbc.Col(html.Div("test")),
+            ]
+        ),
+    ]
+)
+
 
 ''' END DASHBOARD '''
 
