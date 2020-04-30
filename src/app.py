@@ -16,6 +16,9 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 
+# Styling imports
+import dash_bootstrap_components as dbc
+
 # Imports for datatime picker
 from datetime import datetime as dt
 
@@ -29,81 +32,102 @@ px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210Z
 
 ''' DASHBOARD '''
 
-external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
+# external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div([
-    html.Div([html.Label('Dashboard'),
-    html.H1('Visualization tool')], className='hero-body'),
-    html.Div([html.Div([html.Label('Filters'),
-    
-    # Time range filter
-    dcc.DatePickerRange(
-        id='date-range',
-        min_date_allowed=dt(2000, 1, 1),
-        max_date_allowed=dt(2020, 3, 31),
-        start_date=dt(2011, 1, 1).date(),
-        end_date=dt(2011, 12, 31).date(),
-        start_date_placeholder_text='Start Period',
-        end_date_placeholder_text='End Period',
-        calendar_orientation='vertical'
-    ),
+# the style arguments for the sidebar. We use position:fixed and a fixed width
+SIDEBAR_STYLE = {
+    "position": "fixed",
+    "top": 0,
+    "left": 0,
+    "bottom": 0,
+    "width": "16rem",
+    "padding": "2rem 1rem",
+    "background-color": "#f8f9fa",
+}
 
-    # for minimum magnitude selection (if None, plot cubic 0 on map)
-    dcc.Input(
-        id='min-magnitude',
-        type='number',
-        placeholder='minimum magnitude',
-        value=5,
-        min=1,
-        max=10,
-    ),
+# the styles for the main content position it to the right of the sidebar and
+# add some padding.
+CONTENT_STYLE = {
+    "margin-left": "18rem",
+    "margin-right": "2rem",
+    "padding": "2rem 1rem",
+}
 
-    dcc.Input(
-        id='number-of-clusters',
-        type='number',
-        placeholder='fill in number of clusters',
-        value=25,
-        min='2',
-        max='100'
-    ),    
+sidebar = html.Div(
+    [
+        html.H2("Filters", className="display-4"),
+        html.Hr(),
+        html.P(
+            "A simple sidebar layout for filter options", className="lead"
+        ),
+        
+        # Time range filter
+        dcc.DatePickerRange(
+            id='date-range',
+            min_date_allowed=dt(2000, 1, 1),
+            max_date_allowed=dt(2020, 3, 31),
+            start_date=dt(2011, 1, 1).date(),
+            end_date=dt(2011, 12, 31).date(),
+            start_date_placeholder_text='Start Period',
+            end_date_placeholder_text='End Period',
+            calendar_orientation='vertical'
+        ),
 
-    dcc.Dropdown(
-        id='main-map-selector',
-        options=[
-            {'label': 'Scatterplot', 'value': 'Scatter'},
-            {'label': 'Density map', 'value': 'Densitymap'},
-            {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
-            {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
-            {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
-            {'label': 'OPTICS clustering', 'value': 'OPTICS'}
-        ],
-        value='Scatter',
-        multi=False,
-        optionHeight=50,
-        placeholder="Select visualization"
-    ),
-    
-    ], className='column is-one-fifth'), html.Div([html.Label('second column'), 
-    
-    dcc.Graph(id='graph-main',
+        # for minimum magnitude selection (if None, plot cubic 0 on map)
+        dcc.Input(
+            id='min-magnitude',
+            type='number',
+            placeholder='minimum magnitude',
+            value=5,
+            min=1,
+            max=10,
+        ),
+
+        dcc.Input(
+            id='number-of-clusters',
+            type='number',
+            placeholder='fill in number of clusters',
+            value=25,
+            min='2',
+            max='100'
+        ),    
+
+        dcc.Dropdown(
+            id='main-map-selector',
+            options=[
+                {'label': 'Scatterplot', 'value': 'Scatter'},
+                {'label': 'Density map', 'value': 'Densitymap'},
+                {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+                {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+                {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
+                {'label': 'OPTICS clustering', 'value': 'OPTICS'}
+            ],
+            value='Scatter',
+            multi=False,
+            optionHeight=50,
+            placeholder="Select visualization"
+        ),
+
+    ],
+    style=SIDEBAR_STYLE,
+)
+
+content = html.Div([
+        dcc.Graph(id='graph-main',
               #style={'height': 600,
                      #'width': 1200}
                      ),
-    
-    ], className='column'), html.Div([html.Label('third column'),
 
-    dcc.Graph(id='hist_of_mag',
+        dcc.Store(id='storage'),
+        dcc.Graph(id='hist_of_mag',
               style={'height': 600,
                      'width': 500}),
+                     ],
+    id="page-content", style=CONTENT_STYLE)
 
-    ], className='column is-one-fifth')], className='columns'),
-
-    dcc.Store(id='storage'),
-
-    html.Div([html.P("BEP Earthquake Visualization Tool By Jeroen Gommers, Nadine Hol, Wessel Krenn")])
-])
+app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 
 ''' END DASHBOARD '''
 
