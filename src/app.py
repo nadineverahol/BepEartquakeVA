@@ -64,6 +64,7 @@ sidebar = html.Div(
         ),
         
         # Time range filter
+        html.P('Filter time range'),
         dcc.DatePickerRange(
             id='date-range',
             min_date_allowed=dt(2000, 1, 1),
@@ -76,6 +77,7 @@ sidebar = html.Div(
         ),
 
         # for minimum magnitude selection (if None, plot cubic 0 on map)
+        html.P('Minimum magnitude'),
         dcc.Input(
             id='min-magnitude',
             type='number',
@@ -85,6 +87,7 @@ sidebar = html.Div(
             max=10,
         ),
 
+        html.P('Select # clusters'),
         dcc.Input(
             id='number-of-clusters',
             type='number',
@@ -94,6 +97,7 @@ sidebar = html.Div(
             max='100'
         ),    
 
+        html.P('Select visualization'),
         dcc.Dropdown(
             id='main-map-selector',
             options=[
@@ -109,6 +113,8 @@ sidebar = html.Div(
             optionHeight=50,
             placeholder="Select visualization"
         ),
+        dbc.Alert(
+            'Last updated: \n 30 April, 2020', color='primary'),
 
     ],
     style=SIDEBAR_STYLE,
@@ -123,9 +129,8 @@ content = html.Div([
         dcc.Graph(id='hist_of_mag',
               style={'height': 600,
                      'width': 500}),
-                     
-        dcc.Store(id='storage'),
 
+        dcc.Store(id='storage'),
                      ],
     id="page-content", style=CONTENT_STYLE)
 
