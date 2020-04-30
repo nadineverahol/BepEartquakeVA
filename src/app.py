@@ -113,6 +113,17 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
+
+side_graphs = html.Div([
+    html.H2("Side graphs", className="display-4"),
+    html.Hr(),
+
+        dcc.Graph(id='hist_of_mag',
+            style={'height': 600,
+                    'width': "22vw"}),
+    ],
+)
+
 content = html.Div([
     html.H2("Main visualization", className="display-4"),
     html.Hr(),
@@ -125,16 +136,6 @@ content = html.Div([
         dcc.Store(id='storage'),
                      ],
     id="page-content")
-
-side_graphs = html.Div([
-    html.H2("Side graphs", className="display-4"),
-    html.Hr(),
-
-        dcc.Graph(id='hist_of_mag',
-            style={'height': 600,
-                    'width': "22vw"}),
-    ],
-)
 
 app.layout = html.Div(
     [
