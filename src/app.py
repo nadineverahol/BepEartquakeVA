@@ -32,8 +32,6 @@ px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210Z
 
 ''' DASHBOARD '''
 
-# external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
-
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 
 # the style arguments for the sidebar. We use position:fixed and a fixed width
@@ -137,7 +135,7 @@ app.layout = html.Div(
         dbc.Row(
             [
                 dbc.Col(html.Div(sidebar)),
-                dbc.Col(html.Div(content)),
+                dbc.Col([html.Div(content), html.Div('Test onderkant')]),
                 dbc.Col(html.Div("test")),
             ]
         ),
