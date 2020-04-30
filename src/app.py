@@ -2,22 +2,22 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-# import geoplot as gplt
-#from shapely.geometry import Point
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime as dt
 import plotly.express as px
 import json
 import urllib
 import time
-#import requests
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
 from dash.dependencies import Input, Output
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, OPTICS
 
+# Imports for Dash
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+
+# Imports for datatime picker
+from datetime import datetime as dt
 
 start = time.time()
 
@@ -34,16 +34,19 @@ external_stylesheets = ['http://nadinehol.nl/misc/tabler/dashboard.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
-    html.Div([html.Label('Dashboard')]),
+    html.Div([html.Label('Dashboard'),
+    html.H1('Visualization tool')], className='hero-body'),
     html.Div([html.Div([html.Label('Filters'),
     
-    # for time range filtering
+    # Time range filter
     dcc.DatePickerRange(
         id='date-range',
         min_date_allowed=dt(2000, 1, 1),
         max_date_allowed=dt(2020, 3, 31),
         start_date=dt(2011, 1, 1).date(),
         end_date=dt(2011, 12, 31).date(),
+        start_date_placeholder_text='Start Period',
+        end_date_placeholder_text='End Period',
         calendar_orientation='vertical'
     ),
 
