@@ -116,14 +116,16 @@ sidebar = html.Div(
 
 content = html.Div([
         dcc.Graph(id='graph-main',
-              #style={'height': 600,
-                     #'width': 1200}
+              style={'height': 600,
+                     'width': 1200}
                      ),
 
-        dcc.Store(id='storage'),
         dcc.Graph(id='hist_of_mag',
               style={'height': 600,
                      'width': 500}),
+                     
+        dcc.Store(id='storage'),
+
                      ],
     id="page-content", style=CONTENT_STYLE)
 
