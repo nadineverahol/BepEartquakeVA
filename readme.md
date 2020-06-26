@@ -14,6 +14,12 @@ This command creates the virtual environment in the current folder.
 virtualenv {envName}
 ```
 
+If you are working with conda, use the following command.
+
+```
+conda create --name {envName} python
+```
+
 ### Activate virtualenv
 
 Running this command allows you to run python from the virtual environment context.
@@ -26,6 +32,12 @@ If you choose to skip this step while working with an virtual environment you wi
 
 ```
 ./{envName}/Scripts/python.exe src/main.py
+```
+
+Run the following command if you're working with conda.
+
+```
+conda active {envName}
 ```
 
 ### Install requirements.txt

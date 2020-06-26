@@ -1,0 +1,29 @@
+/* body {
+    background: #fff;
+} */
+
+p {
+    color: #263238 ;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.display-4 {
+    font-size: 2rem;
+}
+
+.lead {
+    font-size: 1rem;
+}
+
+.alert-primary: {
+    position: fixed;
+    bottom: 1rem;
+}
+
+.col-7 {
+    margin-top: 30px;
+}
+.col-3 {
+    margin-top: 30px;
+}
