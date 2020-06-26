@@ -1,60 +1,82 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
-from plotly import graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.express as px
-import json
-import urllib
-import time
-from dash.dependencies import Input, Output
-from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN, OPTICS
-
-# Imports for Dash
 import dash
+import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
-
-# Styling imports
-import dash_bootstrap_components as dbc
-
-# Imports for datatime picker
+from dash.dependencies import Input, Output
 from datetime import datetime as dt
+import pandas as pd
+import plotly.express as px
+from plotly import graph_objects as go
+from matplotlib.pyplot import figure
+from plotly.subplots import make_subplots
+from graphs.clustering import clustering_graph 
+from graphs.time import time_graph 
+from graphs.prediction import prediction_graph 
+from graphs.aftershocks import aftershocks_graph 
+from graphs.tsunami import tsunami_graph 
 
-start = time.time()
+###
+# Configuration
+###
 
-# Earthquakes from the year 2000 with minmag=2.5 and maxdepth=100km
 df = pd.read_csv('resources/data.csv')
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
-
-''' DASHBOARD '''
-
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
-
-# the style arguments for the sidebar. We use position:fixed and a fixed width
-SIDEBAR_STYLE = {
-    "position": "sticky",
-    "padding": "2rem 1rem",
-    "background-color": "secondary",
-}
-
-navbar = dbc.NavbarSimple(
-    brand="Earthquake visualization tool",
-    brand_href="#",
-    color="primary",
-    dark=True,
-)
-
-sidebar = html.Div(
+tabs = ["Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
+tab_graphs = [clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
+tab_map_options = [
     [
-        html.H2("Filters", className="display-4"),
+        {'label': 'Scatterplot', 'value': 'Scatter'},
+        {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+        {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
+        {'label': 'OPTICS clustering', 'value': 'OPTICS'}
+    ], 
+    [
+        {'label': 'Scatterplot', 'value': 'Scatter'},
+        {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+    ], 
+    [
+        {'label': 'Scatterplot', 'value': 'Scatter'},
+        {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+    ], 
+    [
+        {'label': 'Scatterplot', 'value': 'Scatter'},
+        {'label': 'Density map', 'value': 'Densitymap'},
+    ], 
+    [
+        {'label': 'Scatterplot', 'value': 'Scatter'},
+    ], 
+]
+
+
+###
+# Layouts
+###
+
+def get_header():
+    return html.Div(dbc.NavbarSimple(
+        brand="Earthquake Visualization Tool",
+        brand_href="#",
+        color="primary",
+        dark=True,
+    ))
+
+def get_tabs(view):
+    return dbc.Tabs([dbc.Tab(label=tab, tab_id=tab) for tab in tabs],
+        id="tabs",
+        active_tab=view,
+    )
+
+def get_sidebar_left(view):
+    content = [ 
+        html.H4("Filters"),
         html.Hr(),
-        html.P(
-            "A simple sidebar layout for filter options", className="lead"
-        ),
         
         # Time range filter
         html.P('Filter time range'),
@@ -78,81 +100,94 @@ sidebar = html.Div(
             value=5,
             min=1,
             max=10,
-        ),
+        )
+    ]
 
+    content.append(html.Div([
         html.P('Select # clusters'),
         dcc.Input(
             id='number-of-clusters',
-            type='number',
+            type="number",
             placeholder='fill in number of clusters',
             value=25,
             min='2',
             max='100'
-        ),    
+        )],  style={"display": "block" if view == "Clustering" else "none"}
+    ))
+    
 
-        html.P('Select visualization'),
-        dcc.Dropdown(
+    content.append(html.P('Select visualization'))
+    content.append(dcc.Dropdown(
             id='main-map-selector',
-            options=[
-                {'label': 'Scatterplot', 'value': 'Scatter'},
-                {'label': 'Density map', 'value': 'Densitymap'},
-                {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
-                {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
-                {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
-                {'label': 'OPTICS clustering', 'value': 'OPTICS'}
-            ],
+            options=tab_map_options[tabs.index(view)],
             value='Scatter',
             multi=False,
             optionHeight=50,
             placeholder="Select visualization"
+        ))
+
+    content.append(dbc.Alert('Last updated: \n 26 June, 2020', color='primary'))
+
+    return html.Div(content, style={
+        "position": "sticky",
+        "padding": "2rem 1rem",
+        "background-color": "secondary",
+    })
+
+def get_graph(view):
+    return html.Div([
+        html.H4("Visualisation"),
+        html.Hr(),
+        dcc.Graph(id='graph', style={
+            'height': "25vw",
+            'width': "50vw"}
         ),
-        dbc.Alert(
-            'Last updated: \n 30 April, 2020', color='primary'),
+    ])
 
-    ],
-    style=SIDEBAR_STYLE,
-)
+def get_sidebar_right(view):
+    return html.Div([
+        html.H4("Metadata"),
+        html.Hr(),
+        dcc.Graph(id='hist_of_mag', style={
+            'height': 600,
+            'width': "22vw"
+        })
+    ])
 
-
-side_graphs = html.Div([
-    html.H2("Side graphs", className="display-4"),
-    html.Hr(),
-
-        dcc.Graph(id='hist_of_mag',
-            style={'height': 600,
-                    'width': "22vw"}),
-    ],
-)
-
-content = html.Div([
-    html.H2("Main visualization", className="display-4"),
-    html.Hr(),
-
-        dcc.Graph(id='graph-main',
-              style={'height': "25vw",
-                     'width': "50vw"}
-                     ),
-
-        dcc.Store(id='storage'),
-                     ],
-    id="page-content")
-
-app.layout = html.Div(
+def bootstrap(view):
+    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+    app.layout = html.Div(
     [
-        dbc.Row(dbc.Col(html.Div(navbar))),
-        dbc.Row(
-            [
-                dbc.Col(html.Div(sidebar),width=2),
-                dbc.Col([html.Div(content), html.Div('Detailed information')],width=7),
-                dbc.Col(html.Div(side_graphs), width=3),
-            ]
-        ),
-    ]
+        dcc.Store(id='storage'),
+        get_header(),
+        get_tabs(view),
+        html.Div(
+            dbc.Row(
+                [
+                    dbc.Col(get_sidebar_left(view), width=2, id="sidebar_left"),
+                    dbc.Col(get_graph(view), width=7, id="graph_container"),
+                    dbc.Col(get_sidebar_right(view), width=3, id="sidebar_right"),
+                ]
+            ), className="container-fluid" 
+        )
+    ])
+
+    return app
+
+app = bootstrap(tabs[0])
+
+
+###
+# Callbacks
+###
+
+@app.callback(
+    [Output("sidebar_left", "children"),
+    Output("graph_container", "children")],
+    [Input("tabs", "active_tab")],
 )
-
-
-''' END DASHBOARD '''
-
+def tab_changed(view):
+    return [get_sidebar_left(view), get_graph(view)]
 
 @app.callback(
     Output('storage', 'data'),
@@ -167,6 +202,17 @@ def filter_data(start_date, end_date, value):
         filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
         dic = filtered_df.to_dict()
         return dic
+
+
+@app.callback(
+    Output('graph', 'figure'),
+    [Input('storage', 'data'),
+     Input('main-map-selector', 'value'),
+     Input('min-magnitude', 'value'),
+     Input('number-of-clusters', 'value'), 
+     Input("tabs", "active_tab")])
+def update_main_graph(dic, option, min_mag, n_clusters, view):
+    return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
 
 
 @app.callback(
@@ -198,101 +244,6 @@ def update_side_graphs(dic):
         fig.append_trace(trace1, 1, 2)
 
     return fig
-
-
-@app.callback(
-    Output('graph-main', 'figure'),
-    [Input('storage', 'data'),
-     Input('main-map-selector', 'value'),
-     Input('min-magnitude', 'value'),
-     Input('number-of-clusters', 'value')])
-def update_main_graph(dic, option, min_mag, n_clusters):
-    if option is None:
-        return {}
-
-    if option == 'Scatter':
-        if min_mag is None or min_mag > df['mag'].max():
-            return {}
-
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='mag', range_color=[2.5, 10],
-                                    size='significance', hover_name='timestamp',
-                                    color_continuous_scale='Bluered', size_max=10, zoom=1, opacity=0.6)
-            return fig
-
-    if option == 'Densitymap':
-        if min_mag is None or min_mag > df['mag'].max():
-            return {}
-
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            fig = px.density_mapbox(filtered_df, lat='lat', lon='long', z='mag', radius=10, zoom=1,
-                                    center=dict(lat=0, lon=0))
-
-            return fig
-
-    if option == 'K-means-Clustering':
-        if min_mag is None or min_mag > df['mag'].max() or n_clusters is None:
-            return {}
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            kmeans = KMeans(n_clusters=n_clusters)
-            kmeans.fit(filtered_df[['long', 'lat']].to_numpy())
-            filtered_df['cluster_nr'] = kmeans.predict(filtered_df[['long', 'lat']].to_numpy())
-
-            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='cluster_nr',
-                                    size='significance', hover_name='timestamp',
-                                    size_max=10, zoom=1, opacity=0.6)
-
-            return fig
-
-    if option == 'Agglomerative':
-        if min_mag is None or min_mag > df['mag'].max() or n_clusters is None:
-            return {}
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            agglomerative = AgglomerativeClustering(n_clusters=n_clusters, distance_threshold=None)
-            agglomerative.fit(filtered_df[['long', 'lat']].to_numpy())
-            filtered_df['agglo_cluster'] = agglomerative.labels_
-
-            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='agglo_cluster',
-                                    size='significance', hover_name='timestamp',
-                                    size_max=10, zoom=1, opacity=0.6)
-
-            return fig
-
-    if option == 'DBSCAN':
-        if min_mag is None or min_mag > df['mag'].max():
-            return {}
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            x_array = filtered_df[['long', 'lat']].to_numpy()
-            # 50/6371 is 50km distance between points in radians
-            db = DBSCAN(eps=100/6371., min_samples=5, algorithm='auto', metric='haversine').fit(np.radians(x_array))
-            filtered_df['DBSCAN_cluster'] = db.labels_
-
-            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='DBSCAN_cluster',
-                                    size='significance', hover_name='timestamp',
-                                    size_max=10, zoom=1, opacity=0.6)
-
-            return fig
-
-    if option == 'OPTICS':
-        if min_mag is None or min_mag > df['mag'].max():
-            return {}
-        else:
-            filtered_df = pd.DataFrame.from_dict(dic)
-            x_array = filtered_df[['long', 'lat']].to_numpy()
-            optics = OPTICS(min_samples=5, eps=100/6371., metric='haversine').fit(np.radians(x_array))
-            filtered_df['Optics'] = optics.labels_
-
-            fig = px.scatter_mapbox(filtered_df, lat='lat', lon='long', color='Optics',
-                                    size='significance', hover_name='timestamp',
-                                    size_max=10, zoom=1, opacity=0.6)
-
-            return fig
-
 
 if __name__ == '__main__':
     app.run_server(debug=True)

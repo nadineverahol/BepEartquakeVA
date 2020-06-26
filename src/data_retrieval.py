@@ -54,5 +54,10 @@ while True:
     if start_datetime > datetime.now():
         break
 
+# Remove all documents where one or more coordinate or magnitude values is not defined
+collection.remove({ "$or": [
+    { "geometry.coordinates": None },
+    { "properties.mag": None }
+]})
 
 print("The earthquake register has been updated!")
