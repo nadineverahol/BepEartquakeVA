@@ -223,6 +223,9 @@ def filter_data(start_date, end_date, value):
      Input('number-of-clusters', 'value'), 
      Input("tabs", "active_tab")])
 def update_main_graph(dic, option, min_mag, n_clusters, view):
+    if min_mag is None or min_mag > df['mag'].max():
+        return{}
+        
     return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
 
 
