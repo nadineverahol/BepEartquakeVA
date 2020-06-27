@@ -9,6 +9,7 @@ import plotly.express as px
 from plotly import graph_objects as go
 from matplotlib.pyplot import figure
 from plotly.subplots import make_subplots
+from graphs.general import general_graph
 from graphs.clustering import clustering_graph 
 from graphs.time import time_graph 
 from graphs.prediction import prediction_graph 
@@ -19,16 +20,26 @@ from graphs.tsunami import tsunami_graph
 # Configuration
 ###
 
+# Load static data
 df = pd.read_csv('resources/data.csv')
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
-tabs = ["Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
-tab_graphs = [clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
+# Load mongo data
+
+
+tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
+tab_graphs = [general_graph, clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
 tab_map_options = [
     [
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+        {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
+        {'label': 'OPTICS clustering', 'value': 'OPTICS'}
+    ], 
+    [
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
         {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
