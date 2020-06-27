@@ -3,12 +3,15 @@ import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+
 from datetime import datetime as dt
 import pandas as pd
+import geopandas
 import plotly.express as px
 from plotly import graph_objects as go
 from matplotlib.pyplot import figure
 from plotly.subplots import make_subplots
+
 from graphs.general import general_graph
 from graphs.clustering import clustering_graph 
 from graphs.time import time_graph 
@@ -16,16 +19,23 @@ from graphs.prediction import prediction_graph
 from graphs.aftershocks import aftershocks_graph 
 from graphs.tsunami import tsunami_graph 
 
+from pymongo import MongoClient
+
 ###
 # Configuration
 ###
 
-# Load static data
-df = pd.read_csv('resources/data.csv')
-df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
-px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
+# # Load static data
+# df = pd.read_csv('resources/data.csv')
+# df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
 
-# Load mongo data
+# Connect to database
+connection = MongoClient("mongodb://localhost:27017/")
+db = connection["map-earthquake-data"]
+collection = db.earthquakes
+
+# Set mapbox
+px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
 
 tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
@@ -205,15 +215,18 @@ def tab_changed(view):
     [Input('date-range', 'start_date'),
      Input('date-range', 'end_date'),
      Input('min-magnitude', 'value')])
-def filter_data(start_date, end_date, value):
-    if value is None:
+def filter_data(start_date, end_date, minmag):
+    if minmag is None:
         return {}
+    
+    query = {
+        "properties.mag" : {"$gte": minmag},
+        #"properties.time": {"$gte": start_date, "$lte": end_date},
+    }
 
-    else:
-        filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
-        dic = filtered_df.to_dict()
-        return dic
+    earthquakes = list(collection.find(query, {'_id': False}).limit(1000))
 
+    return earthquakes
 
 @app.callback(
     Output('graph', 'figure'),
@@ -223,39 +236,34 @@ def filter_data(start_date, end_date, value):
      Input('number-of-clusters', 'value'), 
      Input("tabs", "active_tab")])
 def update_main_graph(dic, option, min_mag, n_clusters, view):
-    if min_mag is None or min_mag > df['mag'].max():
-        return{}
-        
+    # if min_mag is None or min_mag > dic['mag'].max():
+    #     return{}
+
     return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
 
 
 @app.callback(
     Output('hist_of_mag', 'figure'),
     [Input('storage', 'data')])
-def update_side_graphs(dic):
-    filtered_df = pd.DataFrame.from_dict(dic)
+def update_side_graphs(earthquakes):
+    fig = make_subplots(rows=1, cols=2)
+    trace0 = go.Histogram(x=[item['properties']['mag'] for item in earthquakes], name='Magnitudes',
+                        xbins=dict(
+                            start=2.5,
+                            end=10,
+                            size=1
+                        )
+                        )
+    trace1 = go.Histogram(x=[item['properties']['sig'] for item in earthquakes], name='Significances',
+                        xbins=dict(
+                            start=50,
+                            end=1000,
+                            size=50
+                        )
+                        )
 
-    if filtered_df.empty:
-        return {}
-    else:
-        fig = make_subplots(rows=1, cols=2)
-        trace0 = go.Histogram(x=filtered_df['mag'], name='Magnitudes',
-                            xbins=dict(
-                                start=2.5,
-                                end=10,
-                                size=1
-                            )
-                            )
-        trace1 = go.Histogram(x=filtered_df['significance'], name='Significances',
-                            xbins=dict(
-                                start=50,
-                                end=1000,
-                                size=50
-                            )
-                            )
-
-        fig.append_trace(trace0, 1, 1)
-        fig.append_trace(trace1, 1, 2)
+    fig.append_trace(trace0, 1, 1)
+    fig.append_trace(trace1, 1, 2)
 
     return fig
 
