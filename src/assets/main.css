@@ -27,3 +27,7 @@ p {
 .col-3 {
     margin-top: 30px;
 }
+
+/* a:not([href]) {
+    color: #18BC9C;
+} */

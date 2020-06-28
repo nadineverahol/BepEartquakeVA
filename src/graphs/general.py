@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 
-def general_graph(data, option, min_mag, n_clusters):
+def general_graph(data, option, magrange, n_clusters):
 
     lon = [item['geometry']['coordinates'][0] for item in data]
     lat = [item['geometry']['coordinates'][1] for item in data]

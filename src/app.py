@@ -37,7 +37,7 @@ collection = db.earthquakes
 # Set mapbox
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
-
+# Define tabs
 tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
 tab_graphs = [general_graph, clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
 tab_map_options = [
@@ -100,28 +100,33 @@ def get_sidebar_left(view):
         html.Hr(),
         
         # Time range filter
-        html.P('Filter time range'),
-        dcc.DatePickerRange(
-            id='date-range',
+        html.P('Start date'),
+        dcc.DatePickerSingle(
+            id='start-date',
             min_date_allowed=dt(2000, 1, 1),
-            max_date_allowed=dt(2020, 3, 31),
-            start_date=dt(2011, 1, 1).date(),
-            end_date=dt(2011, 12, 31).date(),
-            start_date_placeholder_text='Start Period',
-            end_date_placeholder_text='End Period',
-            calendar_orientation='vertical'
+            max_date_allowed=dt(2020, 5, 30),
+            initial_visible_month=dt(2011, 12, 31),
+            date="2016-08-03"
+        ),
+        html.P('End date'),
+        dcc.DatePickerSingle(
+            id='end-date',
+            min_date_allowed=dt(2000, 1, 1),
+            max_date_allowed=dt(2020, 5, 30),
+            initial_visible_month=dt(2012, 12, 30),
+            date="2017-08-25"
         ),
 
         # for minimum magnitude selection (if None, plot cubic 0 on map)
-        html.P('Minimum magnitude'),
-        dcc.Input(
-            id='min-magnitude',
-            type='number',
-            placeholder='minimum magnitude',
-            value=5,
-            min=1,
+        html.P('Magnitude range'),
+        dcc.RangeSlider(
+            id="magnitude-range",
+            min=2.5,
             max=10,
-        )
+            step=0.5,
+            marks={i: '{}'.format(i) for i in range(2,10)},
+            value=[2, 10]
+        ),
     ]
 
     content.append(html.Div([
@@ -157,7 +162,7 @@ def get_sidebar_left(view):
 
 def get_graph(view):
     return html.Div([
-        html.H4("Visualisation"),
+        html.H4("Visualization"),
         html.Hr(),
         dcc.Graph(id='graph', style={
             'height': "25vw",
@@ -212,17 +217,21 @@ def tab_changed(view):
 
 @app.callback(
     Output('storage', 'data'),
-    [Input('date-range', 'start_date'),
-     Input('date-range', 'end_date'),
-     Input('min-magnitude', 'value')])
-def filter_data(start_date, end_date, minmag):
-    if minmag is None:
+    [Input('start-date', 'date'),
+     Input('end-date', 'date'),
+     Input('magnitude-range', 'value')])
+def filter_data(start_date, end_date, mag_range):
+    if None in [mag_range, start_date, end_date]:
         return {}
     
+    start_date = dt.strptime(start_date, '%Y-%m-%d').timestamp() * 1000
+    end_date = dt.strptime(end_date, '%Y-%m-%d').timestamp() * 1000
+
     query = {
-        "properties.mag" : {"$gte": minmag},
-        #"properties.time": {"$gte": start_date, "$lte": end_date},
+        "properties.mag" : {"$gte": mag_range[0], "$lte": mag_range[1]},
+        "properties.time": {"$gte":start_date, "$lte": end_date},
     }
+    print (query)
 
     earthquakes = list(collection.find(query, {'_id': False}).limit(1000))
 
@@ -232,14 +241,14 @@ def filter_data(start_date, end_date, minmag):
     Output('graph', 'figure'),
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
-     Input('min-magnitude', 'value'),
+     Input('magnitude-range', 'value'),
      Input('number-of-clusters', 'value'), 
      Input("tabs", "active_tab")])
-def update_main_graph(dic, option, min_mag, n_clusters, view):
+def update_main_graph(dic, option, mag_range, n_clusters, view):
     # if min_mag is None or min_mag > dic['mag'].max():
     #     return{}
 
-    return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
+    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters)
 
 
 @app.callback(
