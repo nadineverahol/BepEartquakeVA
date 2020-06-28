@@ -106,7 +106,7 @@ def get_sidebar_left(view):
             min_date_allowed=dt(2000, 1, 1),
             max_date_allowed=dt(2020, 5, 30),
             initial_visible_month=dt(2011, 12, 31),
-            date="2016-08-03"
+            date="2011-03-01"
         ),
         html.P('End date'),
         dcc.DatePickerSingle(
@@ -114,18 +114,18 @@ def get_sidebar_left(view):
             min_date_allowed=dt(2000, 1, 1),
             max_date_allowed=dt(2020, 5, 30),
             initial_visible_month=dt(2012, 12, 30),
-            date="2017-08-25"
+            date="2011-04-30"
         ),
 
-        # for minimum magnitude selection (if None, plot cubic 0 on map)
         html.P('Magnitude range'),
         dcc.RangeSlider(
             id="magnitude-range",
             min=2.5,
             max=10,
             step=0.5,
+            allowCross=False,
             marks={i: '{}'.format(i) for i in range(2,10)},
-            value=[2, 10]
+            value=[2, 10],
         ),
     ]
 
@@ -152,7 +152,21 @@ def get_sidebar_left(view):
             placeholder="Select visualization"
         ))
 
-    content.append(dbc.Alert('Last updated: \n 26 June, 2020', color='primary'))
+    content.append(dbc.Card(
+        dbc.CardBody(
+            [
+                html.H6("Last updated: " + dt.now().strftime('%d %B %Y'), className="card-subtitle"),
+                # html.P(
+                #     "This visualization tool is developed as part of the Bachelor End Project 2020. Contributors: Wessel Kren, Nadine Hol, Jeroen Gommers.",
+                #     className="card-text",
+                # ),
+            ]
+        ),
+        style={"margin-top":"2rem"},
+    ))
+
+
+    
 
     return html.Div(content, style={
         "position": "sticky",
@@ -233,7 +247,7 @@ def filter_data(start_date, end_date, mag_range):
     }
     print (query)
 
-    earthquakes = list(collection.find(query, {'_id': False}).limit(1000))
+    earthquakes = list(collection.find(query, {'_id': False}).limit(5000))
 
     return earthquakes
 
@@ -245,9 +259,6 @@ def filter_data(start_date, end_date, mag_range):
      Input('number-of-clusters', 'value'), 
      Input("tabs", "active_tab")])
 def update_main_graph(dic, option, mag_range, n_clusters, view):
-    # if min_mag is None or min_mag > dic['mag'].max():
-    #     return{}
-
     return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters)
 
 
@@ -261,14 +272,14 @@ def update_side_graphs(earthquakes):
                             start=2.5,
                             end=10,
                             size=1
-                        )
+                        ), marker_color='#2C3E50'
                         )
     trace1 = go.Histogram(x=[item['properties']['sig'] for item in earthquakes], name='Significances',
                         xbins=dict(
                             start=50,
                             end=1000,
-                            size=50
-                        )
+                            size=50,
+                        ), marker_color='#009688'
                         )
 
     fig.append_trace(trace0, 1, 1)
