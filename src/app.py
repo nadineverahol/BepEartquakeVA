@@ -9,22 +9,35 @@ import plotly.express as px
 from plotly import graph_objects as go
 from matplotlib.pyplot import figure
 from plotly.subplots import make_subplots
-from graphs.clustering import clustering_graph 
-from graphs.time import time_graph 
-from graphs.prediction import prediction_graph 
-from graphs.aftershocks import aftershocks_graph 
-from graphs.tsunami import tsunami_graph 
+from graphs.general import general_graph
+from graphs.clustering import clustering_graph
+from graphs.time import time_graph
+from graphs.prediction import prediction_graph
+from graphs.aftershocks import aftershocks_graph
+from graphs.tsunami import tsunami_graph
+import dns
+import pymongo
+import numpy as np
 
 ###
 # Configuration
 ###
 
-df = pd.read_csv('resources/data.csv')
+# Load static data
+df = pd.read_csv('data.csv')
+tsu = pd.read_csv('tsunami_groupes.csv')
+run = pd.read_csv('runup.csv')
 df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
+tsu['timestamp'] = pd.to_datetime(tsu['timestamp'], format="%Y/%m/%d")
+run['timestamp'] = pd.to_datetime(run['timestamp'], format="%Y/%m/%d")
+
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
-tabs = ["Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
-tab_graphs = [clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
+# Load mongo data
+
+
+tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
+tab_graphs = [general_graph, clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
 tab_map_options = [
     [
         {'label': 'Scatterplot', 'value': 'Scatter'},
@@ -33,25 +46,33 @@ tab_map_options = [
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
         {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
         {'label': 'OPTICS clustering', 'value': 'OPTICS'}
-    ], 
+    ],
+    [
+        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+        {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
+        {'label': 'OPTICS clustering', 'value': 'OPTICS'}
+    ],
     [
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
-    ], 
+    ],
     [
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
-    ], 
+    ],
     [
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
-    ], 
+    ],
     [
-        {'label': 'Scatterplot', 'value': 'Scatter'},
-    ], 
+        {'label': 'Source', 'value': 'Scatter'},
+        {'label': 'Runup', 'value': 'Runup'},
+        {'label': 'Scatterplot', 'value': 'plot'},
+    ],
 ]
 
 
@@ -67,17 +88,19 @@ def get_header():
         dark=True,
     ))
 
+
 def get_tabs(view):
     return dbc.Tabs([dbc.Tab(label=tab, tab_id=tab) for tab in tabs],
-        id="tabs",
-        active_tab=view,
-    )
+                    id="tabs",
+                    active_tab=view,
+                    )
+
 
 def get_sidebar_left(view):
-    content = [ 
+    content = [
         html.H4("Filters"),
         html.Hr(),
-        
+
         # Time range filter
         html.P('Filter time range'),
         dcc.DatePickerRange(
@@ -112,19 +135,18 @@ def get_sidebar_left(view):
             value=25,
             min='2',
             max='100'
-        )],  style={"display": "block" if view == "Clustering" else "none"}
+        )], style={"display": "block" if view == "Clustering" else "none"}
     ))
-    
 
     content.append(html.P('Select visualization'))
     content.append(dcc.Dropdown(
-            id='main-map-selector',
-            options=tab_map_options[tabs.index(view)],
-            value='Scatter',
-            multi=False,
-            optionHeight=50,
-            placeholder="Select visualization"
-        ))
+        id='main-map-selector',
+        options=tab_map_options[tabs.index(view)],
+        value='Scatter',
+        multi=False,
+        optionHeight=50,
+        placeholder="Select visualization"
+    ))
 
     content.append(dbc.Alert('Last updated: \n 26 June, 2020', color='primary'))
 
@@ -134,6 +156,7 @@ def get_sidebar_left(view):
         "background-color": "secondary",
     })
 
+
 def get_graph(view):
     return html.Div([
         html.H4("Visualisation"),
@@ -141,8 +164,16 @@ def get_graph(view):
         dcc.Graph(id='graph', style={
             'height': "25vw",
             'width': "50vw"}
-        ),
+                  ),
+        dcc.Graph(id='Runups', style={
+            'height': "25vw",
+            'width': "50vw",}
+                  ),
+
+
+
     ])
+
 
 def get_sidebar_right(view):
     return html.Div([
@@ -154,25 +185,27 @@ def get_sidebar_right(view):
         })
     ])
 
+
 def bootstrap(view):
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
     app.layout = html.Div(
-    [
-        dcc.Store(id='storage'),
-        get_header(),
-        get_tabs(view),
-        html.Div(
-            dbc.Row(
-                [
-                    dbc.Col(get_sidebar_left(view), width=2, id="sidebar_left"),
-                    dbc.Col(get_graph(view), width=7, id="graph_container"),
-                    dbc.Col(get_sidebar_right(view), width=3, id="sidebar_right"),
-                ]
-            ), className="container-fluid" 
-        )
-    ])
+        [
+            dcc.Store(id='storage'),
+            get_header(),
+            get_tabs(view),
+            html.Div(
+                dbc.Row(
+                    [
+                        dbc.Col(get_sidebar_left(view), width=2, id="sidebar_left"),
+                        dbc.Col(get_graph(view), width=7, id="graph_container"),
+                        dbc.Col(get_sidebar_right(view), width=3, id="sidebar_right"),
+                    ]
+                ), className="container-fluid"
+            )
+        ])
 
     return app
+
 
 app = bootstrap(tabs[0])
 
@@ -183,20 +216,30 @@ app = bootstrap(tabs[0])
 
 @app.callback(
     [Output("sidebar_left", "children"),
-    Output("graph_container", "children")],
+     Output("graph_container", "children")],
     [Input("tabs", "active_tab")],
 )
 def tab_changed(view):
     return [get_sidebar_left(view), get_graph(view)]
 
+
 @app.callback(
     Output('storage', 'data'),
     [Input('date-range', 'start_date'),
      Input('date-range', 'end_date'),
-     Input('min-magnitude', 'value')])
-def filter_data(start_date, end_date, value):
+     Input('min-magnitude', 'value'),
+     Input('tabs', 'active_tab')])
+def filter_data(start_date, end_date, value, view):
     if value is None:
         return {}
+    if view == 'Tsunamis':
+        filtered_tsu = tsu[(tsu.timestamp.between(start_date, end_date)) & (tsu.mag >= value)]
+        filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
+        val = len(filtered_df) - len(filtered_tsu)
+        filtered_tsu = filtered_tsu.to_dict()
+        filtered_run = run[(run.timestamp.between(start_date, end_date)) & (run.mag >= value)]
+        filtered_run = filtered_run.to_dict()
+        return {'tsu': filtered_tsu, 'run':filtered_run, 'value': val}
 
     else:
         filtered_df = df[(df.timestamp.between(start_date, end_date)) & (df.mag >= value)]
@@ -209,41 +252,88 @@ def filter_data(start_date, end_date, value):
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
      Input('min-magnitude', 'value'),
-     Input('number-of-clusters', 'value'), 
+     Input('number-of-clusters', 'value'),
      Input("tabs", "active_tab")])
 def update_main_graph(dic, option, min_mag, n_clusters, view):
+    if min_mag is None or min_mag > df['mag'].max():
+        return {}
+
     return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
 
 
 @app.callback(
+    [Output('Runups', 'style'),
+     Output('Runups', 'figure')],
+    [Input('storage', 'data'),
+     Input('main-map-selector', 'value'),
+     Input('graph', 'clickData'),
+     Input('tabs', 'active_tab')])
+def display_click_data(dic, option, clickData, view):
+    if view == 'Tsunamis':
+        if (option == 'Scatter') or (option == 'Runup'):
+            if clickData:
+                tsu = pd.DataFrame.from_dict(dic['tsu'])
+                run = pd.DataFrame.from_dict(dic['run'])
+                runups = tsu[tsu['timestamp2'] == clickData['points'][0]['hovertext']]
+                runup = run[run['timestamp2']== clickData['points'][0]['hovertext']]
+                runup['runup'] = 'Runup'
+                runup['Log(Max Water Height)'] = np.log(runup['Max Water Height'])
+
+                fig = px.scatter_mapbox(runup, lat='lat', lon='long',  color= 'Log(Max Water Height)',
+                                        range_color=[-5, 4], hover_name= 'runup',
+                                        hover_data = ['Max Water Height', 'Distance from Source', 'long', 'lat'],
+                                        size_max=10, zoom=1, opacity=0.6,
+                                        color_continuous_scale='Bluered')
+                fig.add_trace(px.scatter_mapbox(runups, lat='lat', lon='long', color=[5], range_color=[-4,5],
+                                                hover_name=['Source'],
+                                                color_continuous_scale='Bluered', size=[8], size_max=10,
+                                                zoom=0, opacity=0.8).data[0])
+                return {'height': "25vw", 'width': "50vw"}, fig
+
+    return {'display': 'none'}, {}
+
+
+
+
+@app.callback(
     Output('hist_of_mag', 'figure'),
-    [Input('storage', 'data')])
-def update_side_graphs(dic):
+    [Input('storage', 'data'),
+     Input('min-magnitude', 'value'),
+     Input("tabs", "active_tab"),
+     Input('date-range', 'start_date'),
+     Input('date-range', 'end_date')])
+def update_side_graphs(dic, min_mag, view, start_date, end_date):
     filtered_df = pd.DataFrame.from_dict(dic)
 
     if filtered_df.empty:
         return {}
+    if view == 'Tsunamis':
+        trace = go.Pie(values=[dic['value'], len(pd.DataFrame.from_dict(dic['tsu']))],
+                     labels=["Earthquakes that didn't caused a tsunami", 'Earthquakes that did cause a tsunami'],
+                     sort=False)
+        fig = go.Figure(data = trace)
     else:
         fig = make_subplots(rows=1, cols=2)
         trace0 = go.Histogram(x=filtered_df['mag'], name='Magnitudes',
-                            xbins=dict(
-                                start=2.5,
-                                end=10,
-                                size=1
-                            )
-                            )
+                              xbins=dict(
+                                  start=2.5,
+                                  end=10,
+                                  size=1
+                              )
+                              )
         trace1 = go.Histogram(x=filtered_df['significance'], name='Significances',
-                            xbins=dict(
-                                start=50,
-                                end=1000,
-                                size=50
-                            )
-                            )
+                              xbins=dict(
+                                  start=50,
+                                  end=1000,
+                                  size=50
+                              )
+                              )
 
         fig.append_trace(trace0, 1, 1)
         fig.append_trace(trace1, 1, 2)
 
     return fig
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
