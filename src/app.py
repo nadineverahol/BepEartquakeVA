@@ -165,10 +165,19 @@ def get_graph(view):
             'height': "25vw",
             'width': "50vw"}
                   ),
-        dcc.Graph(id='Runups', style={
-            'height': "25vw",
-            'width': "50vw",}
-                  ),
+        dbc.Row(
+            [
+                dcc.Graph(id='Runups', style={
+                    'height': "25vw",
+                    'width': "50vw", }
+                          ),
+                dcc.Graph(id='waterscatter', style={
+                    'height': '25vw',
+                    'width': '25vw',}
+                          )
+            ]
+        )
+
 
 
 
@@ -263,7 +272,9 @@ def update_main_graph(dic, option, min_mag, n_clusters, view):
 
 @app.callback(
     [Output('Runups', 'style'),
-     Output('Runups', 'figure')],
+     Output('Runups', 'figure'),
+     Output('waterscatter', 'style'),
+     Output('waterscatter', 'figure')],
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
      Input('graph', 'clickData'),
@@ -277,9 +288,9 @@ def display_click_data(dic, option, clickData, view):
                 runups = tsu[tsu['timestamp2'] == clickData['points'][0]['hovertext']]
                 runup = run[run['timestamp2']== clickData['points'][0]['hovertext']]
                 runup['runup'] = 'Runup'
-                runup['Log(Max Water Height)'] = np.log(runup['Max Water Height'])
+                runup['Log(Height)'] = np.log(runup['Max Water Height'])
 
-                fig = px.scatter_mapbox(runup, lat='lat', lon='long',  color= 'Log(Max Water Height)',
+                fig=px.scatter_mapbox(runup, lat='lat', lon='long',  color= 'Log(Height)',
                                         range_color=[-5, 4], hover_name= 'runup',
                                         hover_data = ['Max Water Height', 'Distance from Source', 'long', 'lat'],
                                         size_max=10, zoom=1, opacity=0.6,
@@ -288,9 +299,15 @@ def display_click_data(dic, option, clickData, view):
                                                 hover_name=['Source'],
                                                 color_continuous_scale='Bluered', size=[8], size_max=10,
                                                 zoom=0, opacity=0.8).data[0])
-                return {'height': "25vw", 'width': "50vw"}, fig
+                fig.update_layout(height=500)
+                trace = go.Scatter(x=runup['Distance from Source'], y=runup['Travel Hour'],
+                                   mode= 'markers')
+                figb = go.Figure(data=trace)
+                figb.update_layout(xaxis_title = 'Distance from Source (km)',
+                                   yaxis_title= 'Travel Hour', height=500)
+                return {'height': "25vw", 'width': "35vw"}, fig, {'height': "25vw", 'width': "22vw"}, figb
 
-    return {'display': 'none'}, {}
+    return {'display': 'none'}, {}, {'display': 'none'}, {}
 
 
 

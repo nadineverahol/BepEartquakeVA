@@ -24,7 +24,7 @@ def tsunami_graph(data_dict, option, min_mag, n_clusters):
                             hover_name='timestamp2', size='Log(Number of Runups)',
                             hover_data= ['Number of Runups', 'Focal Depth (km)', 'Maximum Water Height (m)'],
                             color_continuous_scale='Bluered', size_max=10, zoom=0.1, opacity=0.6)
-        fig.update_layout(clickmode= 'event+select')
+        fig.update_layout(clickmode= 'event+select', height=400)
         return fig
     if option == 'Runup':
         tsu = pd.DataFrame.from_dict(data_dict['run'])
@@ -33,7 +33,7 @@ def tsunami_graph(data_dict, option, min_mag, n_clusters):
                                 range_color=[-5, 4], hover_name='timestamp2',
                                 hover_data = ['Max Water Height', 'Distance from Source', 'long', 'lat'],
                                 color_continuous_scale='Bluered', size_max=10, zoom=0.1, opacity=0.6)
-        fig.update_layout(clickmode='event+select')
+        fig.update_layout(clickmode='event+select', height = 400)
         return fig
     if option == 'plot':
         tsu = pd.read_csv('tsunami_groupes.csv')
