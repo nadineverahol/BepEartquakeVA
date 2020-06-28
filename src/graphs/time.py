@@ -9,6 +9,7 @@ def time_graph(data, option, min_mag, n_clusters, location):
     time = [dt.fromtimestamp(item['properties']['time']/1000) for item in data]
     mag = [item['properties']['mag'] for item in data]
     place = [item['properties']['place'] for item in data]
+    days = [str(time[i].day) + "-" + str(time[i].month) for i in range(len(time))]
 
     if option is None:
         return {}
@@ -17,7 +18,7 @@ def time_graph(data, option, min_mag, n_clusters, location):
         fig = px.scatter_mapbox(data, lat=lat, lon=lon, color=mag, range_color=[2.5, 10],
         size=size, hover_name=time,
         color_continuous_scale='viridis', size_max=10, zoom=1, opacity=0.6,
-        animation_frame=mag)
+        animation_frame=days)
         
         return fig
 

@@ -20,7 +20,7 @@ def general_graph(data, option, magrange, n_clusters, location):
         fig = px.scatter_mapbox(data, lat=lat, lon=lon, color=mag, range_color=[2.5, 10],
         size=size, hover_name=time,
         color_continuous_scale='viridis', size_max=10, zoom=0.6, opacity=0.6,
-        title="Scatterplot")
+        title="Earthquake occurances across the world")
         
         return fig
     if option == 'Densitymap':
