@@ -165,20 +165,10 @@ def get_graph(view):
             'height': "25vw",
             'width': "50vw"}
                   ),
-        dbc.Row(
-            [
-                dcc.Graph(id='Runups', style={
+        dcc.Graph(id='Runups', style={
                     'height': "25vw",
                     'width': "50vw", }
                           ),
-                dcc.Graph(id='waterscatter', style={
-                    'height': '25vw',
-                    'width': '25vw',}
-                          )
-            ]
-        )
-
-
 
 
     ])
@@ -272,9 +262,7 @@ def update_main_graph(dic, option, min_mag, n_clusters, view):
 
 @app.callback(
     [Output('Runups', 'style'),
-     Output('Runups', 'figure'),
-     Output('waterscatter', 'style'),
-     Output('waterscatter', 'figure')],
+     Output('Runups', 'figure')],
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
      Input('graph', 'clickData'),
@@ -285,14 +273,14 @@ def display_click_data(dic, option, clickData, view):
             if clickData:
                 tsu = pd.DataFrame.from_dict(dic['tsu'])
                 run = pd.DataFrame.from_dict(dic['run'])
-                runups = tsu[tsu['timestamp2'] == clickData['points'][0]['hovertext']]
-                runup = run[run['timestamp2']== clickData['points'][0]['hovertext']]
+                runups = tsu[tsu['gid'] == clickData['points'][0]['customdata'][0]]
+                runup = run[run['gid']== clickData['points'][0]['customdata'][0]]
                 runup['runup'] = 'Runup'
                 runup['Log(Height)'] = np.log(runup['Max Water Height'])
 
                 fig=px.scatter_mapbox(runup, lat='lat', lon='long',  color= 'Log(Height)',
                                         range_color=[-5, 4], hover_name= 'runup',
-                                        hover_data = ['Max Water Height', 'Distance from Source', 'long', 'lat'],
+                                        hover_data = ['timestamp2', 'Max Water Height', 'Distance from Source', 'long', 'lat'],
                                         size_max=10, zoom=1, opacity=0.6,
                                         color_continuous_scale='Bluered')
                 fig.add_trace(px.scatter_mapbox(runups, lat='lat', lon='long', color=[5], range_color=[-4,5],
@@ -300,20 +288,16 @@ def display_click_data(dic, option, clickData, view):
                                                 color_continuous_scale='Bluered', size=[8], size_max=10,
                                                 zoom=0, opacity=0.8).data[0])
                 fig.update_layout(height=500)
-                trace = go.Scatter(x=runup['Distance from Source'], y=runup['Travel Hour'],
-                                   mode= 'markers')
-                figb = go.Figure(data=trace)
-                figb.update_layout(xaxis_title = 'Distance from Source (km)',
-                                   yaxis_title= 'Travel Hour', height=500)
-                return {'height': "25vw", 'width': "35vw"}, fig, {'height': "25vw", 'width': "22vw"}, figb
+                return {'height': "25vw", 'width': "50vw"}, fig
 
-    return {'display': 'none'}, {}, {'display': 'none'}, {}
+    return {'display': 'none'}, {}
 
 
 
 
 @app.callback(
-    Output('hist_of_mag', 'figure'),
+    [Output('hist_of_mag', 'style'),
+    Output('hist_of_mag', 'figure')],
     [Input('storage', 'data'),
      Input('min-magnitude', 'value'),
      Input("tabs", "active_tab"),
@@ -325,10 +309,27 @@ def update_side_graphs(dic, min_mag, view, start_date, end_date):
     if filtered_df.empty:
         return {}
     if view == 'Tsunamis':
-        trace = go.Pie(values=[dic['value'], len(pd.DataFrame.from_dict(dic['tsu']))],
+        tsu = pd.DataFrame.from_dict(dic['tsu'])
+        fig = make_subplots(rows=3, cols=2, specs=[[{'colspan':2, 'type':'pie'}, None],
+                                                   [{'b':0.07},{'b':0.07}],[{}, {}]],
+                            vertical_spacing=0.006, row_heights=[0.7,1,1])
+        fig.append_trace(go.Histogram(x=tsu['mag'], showlegend=False,
+                                      xbins=dict(size=0.4)),2,1)
+        fig.append_trace(go.Histogram(x=tsu['Focal Depth (km)'],showlegend=False,
+                                      xbins=dict(size=5)),2,2)
+        fig.append_trace(go.Histogram(x=np.log(tsu['Number of Runups']),showlegend=False,
+                                      xbins=dict(size=1)),3,1)
+        fig.append_trace(go.Histogram(x=np.log(tsu['Maximum Water Height (m)']),showlegend=False,
+                                      xbins=dict(size=1)),3,2)
+        fig.append_trace(go.Pie(values=[dic['value'], len(tsu)],
                      labels=["Earthquakes that didn't caused a tsunami", 'Earthquakes that did cause a tsunami'],
-                     sort=False)
-        fig = go.Figure(data = trace)
+                     sort=False),1,1)
+        fig.update_layout(legend=dict(x=0,y=1.1))
+        fig.update_xaxes(title_text="Magnitude", row= 2, col= 1, title_font= {'size':10})
+        fig.update_xaxes(title_text="Focal Depth (km)", row=2,col=2, title_font= {'size':10})
+        fig.update_xaxes(title_text="Log(Number <br>of  Runups)", row=3,col=1, title_font= {'size':10})
+        fig.update_xaxes(title_text="Log(Maximum <br>Water  Height (m))", row=3,col=2, title_font= {'size':10})
+        return {'height': 800,'width': "22vw"}, fig
     else:
         fig = make_subplots(rows=1, cols=2)
         trace0 = go.Histogram(x=filtered_df['mag'], name='Magnitudes',
@@ -349,7 +350,7 @@ def update_side_graphs(dic, min_mag, view, start_date, end_date):
         fig.append_trace(trace0, 1, 1)
         fig.append_trace(trace1, 1, 2)
 
-    return fig
+        return {'height': 600,'width': "22vw"}, fig
 
 
 if __name__ == '__main__':
