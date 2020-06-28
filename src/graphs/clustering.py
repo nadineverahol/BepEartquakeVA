@@ -4,7 +4,7 @@ from sklearn.cluster import KMeans
 import geopandas
 
 
-def clustering_graph(data, option, magrange, n_clusters):
+def clustering_graph(data, option, magrange, n_clusters, location):
 
     lon = [item['geometry']['coordinates'][0] for item in data]
     lat = [item['geometry']['coordinates'][1] for item in data]

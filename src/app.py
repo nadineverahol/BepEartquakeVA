@@ -56,8 +56,8 @@ tab_map_options = [
         {'label': 'OPTICS clustering', 'value': 'OPTICS'}
     ], 
     [
-        {'label': 'Scatterplot', 'value': 'Scatter'},
-        {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'Magnitude over time', 'value': 'Magnitude-time'},
+        {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
     ], 
@@ -139,6 +139,19 @@ def get_sidebar_left(view):
             min='2',
             max='100'
         )],  style={"display": "block" if view == "Clustering" else "none"}
+    ))
+
+    content.append(html.Div([
+        html.P('Select location'),
+        dcc.Dropdown(
+            id='location-selector',
+            placeholder='Select location',
+            options=[
+                {'label': 'California', 'value': 'california'},
+                {'label': 'Japan', 'value': 'japan'},
+                {'label': 'Italy', 'value': 'italy'},
+            ]
+        )],  style={"display": "block" if view == "Time Analysis" else "none"}
     ))
     
 
@@ -233,11 +246,13 @@ def tab_changed(view):
     Output('storage', 'data'),
     [Input('start-date', 'date'),
      Input('end-date', 'date'),
-     Input('magnitude-range', 'value')])
-def filter_data(start_date, end_date, mag_range):
+     Input('magnitude-range', 'value'),
+     Input('location-selector', 'value')])
+def filter_data(start_date, end_date, mag_range, location):
     if None in [mag_range, start_date, end_date]:
         return {}
     
+    print(location)
     start_date = dt.strptime(start_date, '%Y-%m-%d').timestamp() * 1000
     end_date = dt.strptime(end_date, '%Y-%m-%d').timestamp() * 1000
 
@@ -245,6 +260,9 @@ def filter_data(start_date, end_date, mag_range):
         "properties.mag" : {"$gte": mag_range[0], "$lte": mag_range[1]},
         "properties.time": {"$gte":start_date, "$lte": end_date},
     }
+    if location is not None:
+        query["properties.place"] = {"$regex": location, '$options': 'gi'}
+
     print (query)
 
     earthquakes = list(collection.find(query, {'_id': False}).limit(5000))
@@ -257,9 +275,10 @@ def filter_data(start_date, end_date, mag_range):
      Input('main-map-selector', 'value'),
      Input('magnitude-range', 'value'),
      Input('number-of-clusters', 'value'), 
-     Input("tabs", "active_tab")])
-def update_main_graph(dic, option, mag_range, n_clusters, view):
-    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters)
+     Input("tabs", "active_tab"),
+     Input("location-selector", "value")])
+def update_main_graph(dic, option, mag_range, n_clusters, view, location):
+    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters, location)
 
 
 @app.callback(
@@ -272,7 +291,7 @@ def update_side_graphs(earthquakes):
                             start=2.5,
                             end=10,
                             size=1
-                        ), marker_color='#2C3E50'
+                        ), marker_color='#b7de2b'
                         )
     trace1 = go.Histogram(x=[item['properties']['sig'] for item in earthquakes], name='Significances',
                         xbins=dict(
