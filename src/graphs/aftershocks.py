@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 from datetime import datetime as dt
 import plotly.express as px
 
-def aftershocks_graph(data, option, min_mag, n_clusters, location):
+def aftershocks_graph(data, option, min_mag, n_clusters, colorscale, location):
     lon = [item['geometry']['coordinates'][0] for item in data]
     lat = [item['geometry']['coordinates'][1] for item in data]
     size = [item['properties']['sig'] for item in data]

@@ -25,10 +25,6 @@ from pymongo import MongoClient
 # Configuration
 ###
 
-# # Load static data
-# df = pd.read_csv('resources/data.csv')
-# df['timestamp'] = pd.to_datetime(df['timestamp'], format="%Y/%m/%d %H:%M:%S")
-
 # Connect to database
 connection = MongoClient("mongodb://localhost:27017/")
 db = connection["map-earthquake-data"]
@@ -41,37 +37,30 @@ px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210Z
 tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
 tab_graphs = [general_graph, clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
 tab_map_options = [
-    [
+    [ # Main visualizations: scatter, density & parallel coordinates
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'Parallel coordinates', 'value': 'ParallelCoordinates'},
+    ], 
+    [ # All clustering options
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
         {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
         {'label': 'OPTICS clustering', 'value': 'OPTICS'}
     ], 
-    [
-        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
-        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
-        {'label': 'Density based spatial clustering', 'value': 'DBSCAN'},
-        {'label': 'OPTICS clustering', 'value': 'OPTICS'}
-    ], 
-    [
+    [ # Time analyses
         {'label': 'Magnitude over time', 'value': 'Magnitude-time'},
-        {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
-        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
-        {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
+        {'label': 'Scatterplot over time', 'value': 'Scatter-time'}
     ], 
-    [
-        {'label': 'Scatterplot', 'value': 'Scatter'},
-        {'label': 'Density map', 'value': 'Densitymap'},
-        {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
+    [ # Prediction analyses
+        {'label': 'Line plot', 'value': 'Line'}, # Only line plot
     ], 
-    [
+    [ # Aftershock analyses
         {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
     ], 
-    [
+    [ # To be filled by Jeroen
         {'label': 'Scatterplot', 'value': 'Scatter'},
     ], 
 ]
@@ -118,6 +107,7 @@ def get_sidebar_left(view):
             date="2011-04-30"
         ),
 
+        # Magnitude range selection
         html.P('Magnitude range'),
         dcc.RangeSlider(
             id="magnitude-range",
@@ -128,8 +118,36 @@ def get_sidebar_left(view):
             marks={i: '{}'.format(i) for i in range(2,10)},
             value=[2, 10],
         ),
+
+        # Depth range selection
+        html.P("Depth range"),
+        dcc.RangeSlider(
+            id='depth-range',
+            min=0,
+            max=735.8,
+            step=20,
+            marks={i: "{}".format(i) for i in range(0,740) if i % 100 == 0},
+            value=[0, 300]
+        ),        
     ]
 
+    # Color scale selection (optional)
+    content.append(html.Div([
+        html.P("Select Color Scale"),
+        dcc.Dropdown(
+            id='color-scale',
+            value='Viridis',
+            options=[
+                {"label": "Viridis", 'value': 'Viridis'},
+                {"label": "Plasma", 'value': 'Plasma'},
+                {"label": "Deep", 'value': 'Deep'},
+                {"label": "Cividis", 'value': 'Cividis'}
+            ]
+        )
+    ], style={'display': "block" if view in ["General","Time Analysis", "Aftershocks", "Tsunamis"] else 'none'}
+    ))
+
+    # Cluster selection (optional)
     content.append(html.Div([
         html.P('Select # clusters'),
         dcc.Input(
@@ -142,6 +160,7 @@ def get_sidebar_left(view):
         )],  style={"display": "block" if view == "Clustering" else "none"}
     ))
 
+    # Location selection (optional)
     content.append(html.Div([
         html.P('Select location'),
         dcc.Dropdown(
@@ -152,10 +171,10 @@ def get_sidebar_left(view):
                 {'label': 'Japan', 'value': 'japan'},
                 {'label': 'Italy', 'value': 'italy'},
             ]
-        )],  style={"display": "block" if view == ["Time Analysis", 'Aftershocks'] else "none"}
+        )],  style={"display": "block" if view in ["Time Analysis", "Aftershocks"] else "none"}
     ))
-    
 
+    # Visualization selection
     content.append(html.P('Select visualization'))
     content.append(dcc.Dropdown(
             id='main-map-selector',
@@ -166,6 +185,7 @@ def get_sidebar_left(view):
             placeholder="Select visualization"
         ))
 
+    # BEP information tag
     content.append(dbc.Card(
         dbc.CardBody(
             [
@@ -178,9 +198,6 @@ def get_sidebar_left(view):
         ),
         style={"margin-top":"2rem"},
     ))
-
-
-    
 
     return html.Div(content, style={
         "position": "sticky",
@@ -248,19 +265,21 @@ def tab_changed(view):
     [Input('start-date', 'date'),
      Input('end-date', 'date'),
      Input('magnitude-range', 'value'),
+     Input('depth-range', 'value'),
      Input('location-selector', 'value')])
-def filter_data(start_date, end_date, mag_range, location):
-    if None in [mag_range, start_date, end_date]:
+def filter_data(start_date, end_date, mag_range, depth_range, location):
+    if None in [mag_range, depth_range, start_date, end_date]:
         return {}
     
-    print(location)
     start_date = dt.strptime(start_date, '%Y-%m-%d').timestamp() * 1000
     end_date = dt.strptime(end_date, '%Y-%m-%d').timestamp() * 1000
 
     query = {
         "properties.mag" : {"$gte": mag_range[0], "$lte": mag_range[1]},
         "properties.time": {"$gte":start_date, "$lte": end_date},
+        "geometry.coordinates.2": {"$gte": depth_range[0], "$lte": depth_range[1]},
     }
+
     if location is not None:
         query["properties.place"] = {"$regex": location, '$options': 'gi'}
 
@@ -275,11 +294,12 @@ def filter_data(start_date, end_date, mag_range, location):
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
      Input('magnitude-range', 'value'),
-     Input('number-of-clusters', 'value'), 
+     Input('number-of-clusters', 'value'),
+     Input('color-scale', 'value'),
      Input("tabs", "active_tab"),
      Input("location-selector", "value")])
-def update_main_graph(dic, option, mag_range, n_clusters, view, location):
-    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters, location)
+def update_main_graph(dic, option, mag_range, n_clusters, colorscale, view, location):
+    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters, colorscale, location)
 
 
 @app.callback(
@@ -292,18 +312,19 @@ def update_side_graphs(earthquakes):
                             start=2.5,
                             end=10,
                             size=1
-                        ), marker_color='#b7de2b'
+                        ), marker_color='#5fc861'
                         )
-    trace1 = go.Histogram(x=[item['properties']['sig'] for item in earthquakes], name='Significances',
+    trace1 = go.Histogram(x=[item['geometry']['coordinates'][2] for item in earthquakes], name='Depth distribution',
                         xbins=dict(
-                            start=50,
-                            end=1000,
+                            start=-800,
+                            end=0,
                             size=50,
-                        ), marker_color='#009688'
+                        ), marker_color='#3e4989'
                         )
 
     fig.append_trace(trace0, 1, 1)
     fig.append_trace(trace1, 1, 2)
+    fig.update_layout(legend=dict(x=0.5, y=1.2))
 
     return fig
 
