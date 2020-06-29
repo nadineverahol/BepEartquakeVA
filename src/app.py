@@ -37,7 +37,7 @@ collection = db.earthquakes
 # Set mapbox
 px.set_mapbox_access_token("pk.eyJ1IjoidHJvdzEyIiwiYSI6ImNrOWNvOGpiajAwemozb210ZGttNXpoemUifQ.HtK_x39UnnD2_bXveR9nsQ")
 
-
+# Define tabs
 tabs = ["General", "Clustering", "Time Analysis", "Prediction", "Aftershocks", "Tsunamis"]
 tab_graphs = [general_graph, clustering_graph, time_graph, prediction_graph, aftershocks_graph, tsunami_graph]
 tab_map_options = [
@@ -56,8 +56,8 @@ tab_map_options = [
         {'label': 'OPTICS clustering', 'value': 'OPTICS'}
     ], 
     [
-        {'label': 'Scatterplot', 'value': 'Scatter'},
-        {'label': 'Density map', 'value': 'Densitymap'},
+        {'label': 'Magnitude over time', 'value': 'Magnitude-time'},
+        {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
         {'label': 'Agglomerative Hierarchical Clustering', 'value': 'Agglomerative'},
     ], 
@@ -67,6 +67,7 @@ tab_map_options = [
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
     ], 
     [
+        {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
     ], 
@@ -100,28 +101,33 @@ def get_sidebar_left(view):
         html.Hr(),
         
         # Time range filter
-        html.P('Filter time range'),
-        dcc.DatePickerRange(
-            id='date-range',
+        html.P('Start date'),
+        dcc.DatePickerSingle(
+            id='start-date',
             min_date_allowed=dt(2000, 1, 1),
-            max_date_allowed=dt(2020, 3, 31),
-            start_date=dt(2011, 1, 1).date(),
-            end_date=dt(2011, 12, 31).date(),
-            start_date_placeholder_text='Start Period',
-            end_date_placeholder_text='End Period',
-            calendar_orientation='vertical'
+            max_date_allowed=dt(2020, 5, 30),
+            initial_visible_month=dt(2011, 12, 31),
+            date="2011-03-01"
+        ),
+        html.P('End date'),
+        dcc.DatePickerSingle(
+            id='end-date',
+            min_date_allowed=dt(2000, 1, 1),
+            max_date_allowed=dt(2020, 5, 30),
+            initial_visible_month=dt(2012, 12, 30),
+            date="2011-04-30"
         ),
 
-        # for minimum magnitude selection (if None, plot cubic 0 on map)
-        html.P('Minimum magnitude'),
-        dcc.Input(
-            id='min-magnitude',
-            type='number',
-            placeholder='minimum magnitude',
-            value=5,
-            min=1,
+        html.P('Magnitude range'),
+        dcc.RangeSlider(
+            id="magnitude-range",
+            min=2.5,
             max=10,
-        )
+            step=0.5,
+            allowCross=False,
+            marks={i: '{}'.format(i) for i in range(2,10)},
+            value=[2, 10],
+        ),
     ]
 
     content.append(html.Div([
@@ -135,6 +141,19 @@ def get_sidebar_left(view):
             max='100'
         )],  style={"display": "block" if view == "Clustering" else "none"}
     ))
+
+    content.append(html.Div([
+        html.P('Select location'),
+        dcc.Dropdown(
+            id='location-selector',
+            placeholder='Select location',
+            options=[
+                {'label': 'California', 'value': 'california'},
+                {'label': 'Japan', 'value': 'japan'},
+                {'label': 'Italy', 'value': 'italy'},
+            ]
+        )],  style={"display": "block" if view == ["Time Analysis", 'Aftershocks'] else "none"}
+    ))
     
 
     content.append(html.P('Select visualization'))
@@ -147,7 +166,21 @@ def get_sidebar_left(view):
             placeholder="Select visualization"
         ))
 
-    content.append(dbc.Alert('Last updated: \n 26 June, 2020', color='primary'))
+    content.append(dbc.Card(
+        dbc.CardBody(
+            [
+                html.H6("Last updated: " + dt.now().strftime('%d %B %Y'), className="card-subtitle"),
+                # html.P(
+                #     "This visualization tool is developed as part of the Bachelor End Project 2020. Contributors: Wessel Kren, Nadine Hol, Jeroen Gommers.",
+                #     className="card-text",
+                # ),
+            ]
+        ),
+        style={"margin-top":"2rem"},
+    ))
+
+
+    
 
     return html.Div(content, style={
         "position": "sticky",
@@ -157,11 +190,11 @@ def get_sidebar_left(view):
 
 def get_graph(view):
     return html.Div([
-        html.H4("Visualisation"),
+        html.H4("Visualization"),
         html.Hr(),
         dcc.Graph(id='graph', style={
-            'height': "25vw",
-            'width': "50vw"}
+            'height': "32vw",
+            'width': "58vw"}
         ),
     ])
 
@@ -212,19 +245,28 @@ def tab_changed(view):
 
 @app.callback(
     Output('storage', 'data'),
-    [Input('date-range', 'start_date'),
-     Input('date-range', 'end_date'),
-     Input('min-magnitude', 'value')])
-def filter_data(start_date, end_date, minmag):
-    if minmag is None:
+    [Input('start-date', 'date'),
+     Input('end-date', 'date'),
+     Input('magnitude-range', 'value'),
+     Input('location-selector', 'value')])
+def filter_data(start_date, end_date, mag_range, location):
+    if None in [mag_range, start_date, end_date]:
         return {}
     
-    query = {
-        "properties.mag" : {"$gte": minmag},
-        #"properties.time": {"$gte": start_date, "$lte": end_date},
-    }
+    print(location)
+    start_date = dt.strptime(start_date, '%Y-%m-%d').timestamp() * 1000
+    end_date = dt.strptime(end_date, '%Y-%m-%d').timestamp() * 1000
 
-    earthquakes = list(collection.find(query, {'_id': False}).limit(1000))
+    query = {
+        "properties.mag" : {"$gte": mag_range[0], "$lte": mag_range[1]},
+        "properties.time": {"$gte":start_date, "$lte": end_date},
+    }
+    if location is not None:
+        query["properties.place"] = {"$regex": location, '$options': 'gi'}
+
+    print (query)
+
+    earthquakes = list(collection.find(query, {'_id': False}).limit(5000))
 
     return earthquakes
 
@@ -232,14 +274,12 @@ def filter_data(start_date, end_date, minmag):
     Output('graph', 'figure'),
     [Input('storage', 'data'),
      Input('main-map-selector', 'value'),
-     Input('min-magnitude', 'value'),
+     Input('magnitude-range', 'value'),
      Input('number-of-clusters', 'value'), 
-     Input("tabs", "active_tab")])
-def update_main_graph(dic, option, min_mag, n_clusters, view):
-    # if min_mag is None or min_mag > dic['mag'].max():
-    #     return{}
-
-    return tab_graphs[tabs.index(view)](dic, option, min_mag, n_clusters)
+     Input("tabs", "active_tab"),
+     Input("location-selector", "value")])
+def update_main_graph(dic, option, mag_range, n_clusters, view, location):
+    return tab_graphs[tabs.index(view)](dic, option, mag_range, n_clusters, location)
 
 
 @app.callback(
@@ -252,14 +292,14 @@ def update_side_graphs(earthquakes):
                             start=2.5,
                             end=10,
                             size=1
-                        )
+                        ), marker_color='#b7de2b'
                         )
     trace1 = go.Histogram(x=[item['properties']['sig'] for item in earthquakes], name='Significances',
                         xbins=dict(
                             start=50,
                             end=1000,
-                            size=50
-                        )
+                            size=50,
+                        ), marker_color='#009688'
                         )
 
     fig.append_trace(trace0, 1, 1)
