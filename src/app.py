@@ -304,29 +304,57 @@ def update_main_graph(dic, option, mag_range, n_clusters, colorscale, view, loca
 
 @app.callback(
     Output('hist_of_mag', 'figure'),
-    [Input('storage', 'data')])
-def update_side_graphs(earthquakes):
-    fig = make_subplots(rows=1, cols=2)
-    trace0 = go.Histogram(x=[item['properties']['mag'] for item in earthquakes], name='Magnitudes',
-                        xbins=dict(
-                            start=2.5,
-                            end=10,
-                            size=1
-                        ), marker_color='#5fc861'
-                        )
-    trace1 = go.Histogram(x=[item['geometry']['coordinates'][2] for item in earthquakes], name='Depth distribution',
-                        xbins=dict(
-                            start=-800,
-                            end=0,
-                            size=50,
-                        ), marker_color='#3e4989'
-                        )
+    [Input('storage', 'data'),
+    Input('graph', 'selectedData')])
+def update_side_graphs(earthquakes, temp):
+    if not temp:
+        fig = make_subplots(rows=1, cols=2)
+        trace0 = go.Histogram(x=[item['properties']['mag'] for item in earthquakes], name='Magnitudes',
+                              xbins=dict(
+                                  start=2.5,
+                                  end=10,
+                                  size=1
+                              )
+                              )
+        trace1 = go.Histogram(x=[item['geometry']['coordinates'][2] * -1 for item in earthquakes], name='Depth distribution',
+                              xbins=dict(
+                                  start=-800,
+                                  end=0,
+                                  size=50
+                              )
+                              )
 
-    fig.append_trace(trace0, 1, 1)
-    fig.append_trace(trace1, 1, 2)
-    fig.update_layout(legend=dict(x=0.5, y=1.2))
+        fig.append_trace(trace0, 1, 1)
+        fig.append_trace(trace1, 1, 2)
+        fig.update_layout(legend=dict(x=0.5, y=1.2))
 
-    return fig
+        return fig
+
+    else:
+        mag = [list(item.values())[7] for item in temp['points']]
+        depth = [list(item.values())[8][0] * -1 for item in temp['points']]
+
+        fig = make_subplots(rows=1, cols=2)
+        trace0 = go.Histogram(x=mag, name='Magnitude distribution',
+                              xbins=dict(
+                                  start=2.5,
+                                  end=10,
+                                  size=0.5
+                              )
+                              )
+        trace1 = go.Histogram(x=depth, name='Depth distribution',
+                              xbins=dict(
+                                  start=-800,
+                                  end=0,
+                                  size=25
+                              )
+                              )
+
+        fig.append_trace(trace0, 1, 1)
+        fig.append_trace(trace1, 1, 2)
+        fig.update_layout(legend=dict(x=0.5, y=1.2))
+
+        return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True)
