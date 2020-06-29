@@ -67,6 +67,7 @@ tab_map_options = [
         {'label': 'K-means Clustering', 'value': 'K-means-Clustering'},
     ], 
     [
+        {'label': 'Scatterplot over time', 'value': 'Scatter-time'},
         {'label': 'Scatterplot', 'value': 'Scatter'},
         {'label': 'Density map', 'value': 'Densitymap'},
     ], 
@@ -151,7 +152,7 @@ def get_sidebar_left(view):
                 {'label': 'Japan', 'value': 'japan'},
                 {'label': 'Italy', 'value': 'italy'},
             ]
-        )],  style={"display": "block" if view == "Time Analysis" else "none"}
+        )],  style={"display": "block" if view == ["Time Analysis", 'Aftershocks'] else "none"}
     ))
     
 
@@ -192,8 +193,8 @@ def get_graph(view):
         html.H4("Visualization"),
         html.Hr(),
         dcc.Graph(id='graph', style={
-            'height': "25vw",
-            'width': "50vw"}
+            'height': "32vw",
+            'width': "58vw"}
         ),
     ])
 
