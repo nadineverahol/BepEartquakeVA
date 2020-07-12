@@ -27,3 +27,28 @@ p {
 .col-3 {
     margin-top: 30px;
 }
+
+a:not([href]) {
+    color: #90a4ae;
+}
+
+/* Range slider */
+.rc-slider-track {
+    background-color: #90a4ae ;
+}
+
+.rc-slider-dot-active {
+    border-color: #90a4ae;
+}
+
+.rc-slider-handle {
+    border: solid 2px #212529;
+}
+
+.rc-slider-handle:focus {
+    border: solid 2px #212529;
+}
+
+.rc-slider-handle:hover {
+    border: solid 2px #212529;
+}
